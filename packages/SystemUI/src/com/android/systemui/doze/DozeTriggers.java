@@ -33,6 +33,7 @@ import android.os.SystemClock;
 import android.text.format.Formatter;
 import android.util.IndentingPrintWriter;
 import android.util.Log;
+import android.os.UserHandle;
 import android.view.Display;
 
 import androidx.annotation.NonNull;
@@ -379,7 +380,21 @@ public class DozeTriggers implements DozeMachine.Part {
         return mKeyguardStateController.isOccluded();
     }
 
+    private boolean dozeInsteadOfWake(@DozeLog.Reason int reason) {
+        switch (reason) {
+            case DozeLog.REASON_SENSOR_PICKUP:
+                return mConfig.pickupGestureAmbient(UserHandle.USER_CURRENT);
+            case DozeLog.REASON_SENSOR_TAP:
+                return mConfig.tapGestureAmbient(UserHandle.USER_CURRENT);
+        }
+        return false;
+    }
+
     private void gentleWakeUp(@DozeLog.Reason int reason) {
+        if (dozeInsteadOfWake(reason)) {
+            requestPulse(reason, true, null);
+            return;
+        }
         // Log screen wake up reason (lift/pickup, tap, double-tap)
         Optional.ofNullable(DozingUpdateUiEvent.fromReason(reason))
                 .ifPresent(uiEventEnum -> mUiEventLogger.log(uiEventEnum, getKeyguardSessionId()));
